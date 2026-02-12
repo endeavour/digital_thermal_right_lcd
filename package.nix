@@ -44,7 +44,6 @@ python3.pkgs.buildPythonPackage {
     numpy
     hid
     psutil
-    pyamdgpuinfo
   ];
 
   # Use uv to prepare dependencies before the standard build
