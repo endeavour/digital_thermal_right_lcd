@@ -10,7 +10,7 @@ in {
 
     config = mkOption {
       type = types.path;
-      default = ./config.json;
+      default = "${config._module.args.package}/share/hid-digital-lcd-controller/config.json";
       description = "Path to the configuration file";
     };
 
