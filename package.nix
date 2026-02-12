@@ -79,27 +79,10 @@ export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$CPLUS
 export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:\$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:\$LD_LIBRARY_PATH"
 
-# Debug and run the controller
-echo "Wrapper script called with arguments: $@"
-echo "Number of arguments: $#"
-
-# Find the config file argument (skip systemd's internal arguments)
-config_file=""
-for i in "$@"; do
-  echo "Arg: $i"
-  if [[ "$i" == *.json ]]; then
-    config_file="$i"
-    break
-  fi
-done
-
-if [ -z "$config_file" ]; then
-  echo "No config file provided, using default"
-  config_file="$out/share/hid-digital-lcd-controller/config.json"
-else
-  echo "Using config file: $config_file"
-fi
-echo "Final config file: $config_file"
+# Use hardcoded config file path to avoid argument parsing issues
+config_file="$out/share/hid-digital-lcd-controller/config.json"
+echo "Using config file: $config_file"
+echo "Config file exists: $(test -f "$config_file" && echo "YES" || echo "NO")"
 echo "Python version:"
 ${python3}/bin/python3 --version
 exec ${python3}/bin/python3 -c "
