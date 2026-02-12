@@ -76,19 +76,21 @@ export C_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$C_INCLUDE
 export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$CPLUS_INCLUDE_PATH"
 export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:\$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:\$LD_LIBRARY_PATH"
-config_file="$out/share/hid-digital-lcd-controller/config.json"
-echo "Using config file: $config_file"
-echo "Config file should be at: $config_file"
-exec ${python3}/bin/python3 -c "
-import sys
-sys.path.insert(0, '$out/lib/python3.13/site-packages')
-sys.path.insert(0, '$out/lib/python3.13/site-packages/digital_thermal_right_lcd')
-sys.path.insert(0, '${python3.pkgs.numpy}/lib/python3.13/site-packages')
-sys.path.insert(0, '${python3.pkgs.hid}/lib/python3.13/site-packages')
-sys.path.insert(0, '${python3.pkgs.psutil}/lib/python3.13/site-packages')
-from digital_thermal_right_lcd.controller import main
-main('$config_file')
-"
+      config_file="$out/share/hid-digital-lcd-controller/config.json"
+      echo "Using config file: $config_file"
+      echo "Config file should be at: $config_file"
+      exec ${python3}/bin/python3 -c ''
+        import sys
+        sys.path.insert(0, '$out/lib/python3.13/site-packages')
+        sys.path.insert(0, '$out/lib/python3.13/site-packages/digital_thermal_right_lcd')
+        sys.path.insert(0, '${python3.pkgs.numpy}/lib/python3.13/site-packages')
+        sys.path.insert(0, '${python3.pkgs.hid}/lib/python3.13/site-packages')
+        sys.path.insert(0, '${python3.pkgs.psutil}/lib/python3.13/site-packages')
+        from digital_thermal_right_lcd.controller import main
+        main('$config_file')
+      ''
+      ''
+    ''
 EOF
     chmod +x $out/bin/hid-digital-lcd-controller
     
