@@ -79,8 +79,11 @@ export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$CPLUS
 export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:\$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:\$LD_LIBRARY_PATH"
 
-# Run the controller
-config_file="''${1:-$out/share/hid-digital-lcd-controller/config.json}"
+# Run the controller using command line arguments
+config_file="$1"
+if [ -z "$config_file" ]; then
+  config_file="$out/share/hid-digital-lcd-controller/config.json"
+fi
 exec ${python3}/bin/python3 -c "
 import sys
 sys.path.insert(0, '$out/lib/python3.13/site-packages')
