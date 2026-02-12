@@ -69,7 +69,7 @@ python3.pkgs.buildPythonPackage {
     
     # Create wrapper script that sets up environment
     cat > $out/bin/hid-digital-lcd-controller << EOF
-#!/usr/bin/env bash
+#!${stdenv.shell}
 set -e
 
 # Set environment variables for native libraries
