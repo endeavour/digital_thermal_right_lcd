@@ -24,6 +24,7 @@ python3.pkgs.buildPythonPackage {
     pkg-config
     python3.pkgs.setuptools
     python3.pkgs.wheel
+    python3.pkgs.hatchling
   ];
 
   buildInputs = [
