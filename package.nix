@@ -84,6 +84,7 @@ config_file="''${1:-$out/share/hid-digital-lcd-controller/config.json}"
 exec ${python3}/bin/python3 -c "
 import sys
 sys.path.insert(0, '$out/lib/python3.13/site-packages')
+sys.path.insert(0, '$out/lib/python3.13/site-packages/digital_thermal_right_lcd')
 sys.path.insert(0, '${python3.pkgs.numpy}/lib/python3.13/site-packages')
 sys.path.insert(0, '${python3.pkgs.hid}/lib/python3.13/site-packages')
 sys.path.insert(0, '${python3.pkgs.psutil}/lib/python3.13/site-packages')
