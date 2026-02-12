@@ -82,7 +82,9 @@ export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidap
 # Use hardcoded config file path to avoid argument parsing issues
 config_file="$out/share/hid-digital-lcd-controller/config.json"
 echo "Using config file: $config_file"
-echo "Config file exists: $(test -f "$config_file" && echo "YES" || echo "NO")"
+echo "Config file should be at: $config_file"
+echo "Listing share directory contents:"
+ls -la "$out/share/hid-digital-lcd-controller/"
 echo "Python version:"
 ${python3}/bin/python3 --version
 exec ${python3}/bin/python3 -c "
