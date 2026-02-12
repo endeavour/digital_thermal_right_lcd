@@ -70,12 +70,14 @@ python3.pkgs.buildPythonPackage {
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
     
     # Create wrapper script
-    cat > $out/bin/hid-digital-lcd-controller << EOF
+    cat > $out/bin/hid-digital-lcd-controller << 'EOF'
     #!${python3}/bin/python3
     import sys
     import os
     # Add the source directory to Python path
-    sys.path.insert(0, '$out/src')
+    bin_dir = os.path.dirname(os.path.abspath(__file__))
+    src_dir = os.path.join(bin_dir, '..', 'src')
+    sys.path.insert(0, src_dir)
     from controller import main
     if len(sys.argv) > 1:
         sys.argv = ['hid-digital-lcd-controller', sys.argv[1]]
