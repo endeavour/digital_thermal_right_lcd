@@ -1,10 +1,10 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, package ? null, ... }:
 
 with lib;
 
 let
   cfg = config.services.hid-digital-lcd-controller;
-  package = pkgs.callPackage ../package.nix {};
+  defaultPackage = if package != null then package else pkgs.callPackage ./package.nix {};
 in {
   options.services.hid-digital-lcd-controller = {
     enable = mkEnableOption "Digital LCD Controller for Thermalright CPU Cooler";
@@ -29,7 +29,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    systemd.packages = [ package ];
+    systemd.packages = [ defaultPackage ];
 
     systemd.services.hid-digital-lcd-controller = {
       description = "Digital LCD Controller for Thermalright CPU Cooler";
@@ -41,7 +41,7 @@ in {
         Type = "simple";
         User = cfg.user;
         Group = cfg.group;
-        ExecStart = "${package}/bin/hid-digital-lcd-controller ${cfg.config}";
+        ExecStart = "${defaultPackage}/bin/hid-digital-lcd-controller ${cfg.config}";
         Restart = "always";
         RestartSec = 5;
         StandardOutput = "journal";
