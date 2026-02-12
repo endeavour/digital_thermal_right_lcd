@@ -84,7 +84,7 @@ config_file="''${1:-$out/share/hid-digital-lcd-controller/config.json}"
 exec ${python3}/bin/python3 -c "
 import sys
 sys.path.insert(0, '$out/lib/python3.13/site-packages')
-from controller import main
+from digital_thermal_right_lcd.controller import main
 main('$config_file')
 "
 EOF
