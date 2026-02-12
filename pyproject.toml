@@ -9,7 +9,6 @@ dependencies = [
   "numpy",
   "hid",
   "psutil",
-  "pyamdgpuinfo",
 ]
 requires-python = ">= 3.13, < 3.14"
 readme = "README.md"
