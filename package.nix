@@ -56,6 +56,7 @@ python3.pkgs.buildPythonPackage {
     
     # Use uv to sync dependencies to ensure they're available
     export UV_CACHE_DIR=$TMPDIR/uv-cache
+    export UV_PYTHON="${python3}/bin/python3"
     mkdir -p $UV_CACHE_DIR
     
     # Run uv sync to create virtual environment with dependencies
