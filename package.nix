@@ -69,7 +69,7 @@ python3.pkgs.buildPythonPackage {
     cat > $out/bin/hid-digital-lcd-controller << 'EOF'
     #!${python3}/bin/python3
     import sys
-    from digital_thermal_right_lcd.controller import main
+    from controller import main
     if len(sys.argv) > 1:
         sys.argv = ['hid-digital-lcd-controller', sys.argv[1]]
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else None))
