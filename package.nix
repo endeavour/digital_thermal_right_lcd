@@ -57,7 +57,6 @@ python3.pkgs.buildPythonPackage {
     "numpy"
     "hid"
     "psutil"
-    "pyamdgpuinfo"
   ];
 
   # Install wrapper script that sets up proper environment
