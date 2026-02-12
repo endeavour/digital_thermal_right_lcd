@@ -42,7 +42,6 @@ python3.pkgs.buildPythonPackage {
     numpy
     hid
     psutil
-    pyamdgpuinfo
   ];
 
   preBuild = ''
