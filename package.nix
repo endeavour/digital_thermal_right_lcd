@@ -65,9 +65,10 @@ python3.pkgs.buildPythonPackage {
     mkdir -p $out/share/hid-digital-lcd-controller
     mkdir -p $out/src
     
-    # Copy source files
+    # Copy source files and layout
     cp -r src/* $out/src/
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
+    cp ${./layout.json} $out/layout.json  # Copy to root as expected by code
     
     # Create wrapper script
     cat > $out/bin/hid-digital-lcd-controller << 'EOF'
