@@ -59,8 +59,14 @@ python3.pkgs.buildPythonPackage {
     export UV_PYTHON="${python3}/bin/python3"
     mkdir -p $UV_CACHE_DIR
     
-    # Run uv sync to create virtual environment with dependencies
-    uv sync --no-dev --no-install-project
+    # Create a virtual environment with uv but install from the Nix packages
+    uv venv .venv
+    
+    # Install the dependencies using the Nix-provided packages
+    .venv/bin/pip install --no-deps \
+      ${python3.pkgs.numpy} \
+      ${python3.pkgs.hid} \
+      ${python3.pkgs.psutil}
     
     # The virtual environment is now in .venv with all dependencies
     export PYTHONPATH=$(pwd)/.venv/lib/python3.13/site-packages:$PYTHONPATH
