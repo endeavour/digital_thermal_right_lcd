@@ -67,23 +67,17 @@ python3.pkgs.buildPythonPackage {
     # Copy default config
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
     
-    # Create wrapper script that sets up environment using write
+    # Create wrapper script that sets up environment
     writeShellScriptBin "hid-digital-lcd-controller" ''
       set -e
-      
-      # Set environment variables for native libraries
       export CPPFLAGS="-I${libdrm.dev}/include -I${linuxHeaders}/include/drm -I${libdrm.dev}/include/libdrm"
       export C_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$C_INCLUDE_PATH"
       export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$CPLUS_INCLUDE_PATH"
       export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:\$PKG_CONFIG_PATH"
       export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:\$LD_LIBRARY_PATH"
-      
-      # Use hardcoded config file path
       config_file="$out/share/hid-digital-lcd-controller/config.json"
       echo "Using config file: $config_file"
       echo "Config file should be at: $config_file"
-      
-      # Run the controller
       exec ${python3}/bin/python3 -c "
         import sys
         sys.path.insert(0, '$out/lib/python3.13/site-packages')
