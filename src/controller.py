@@ -91,10 +91,12 @@ class Controller:
 
         # 1. Converter cores para lista de bytes na ordem BRG (Hardware nativo)
         all_led_bytes = []
+        active_leds = 0
         for i in range(NUMBER_OF_LEDS):
             if self.leds[i] == 0:
                 all_led_bytes.extend([0, 0, 0])
             else:
+                active_leds += 1
                 color = self.colors[i]
                 # Hex string para int
                 r = int(color[0:2], 16)
@@ -103,14 +105,24 @@ class Controller:
                 # Ordem BRG (Blue, Red, Green)
                 all_led_bytes.extend([b, r, g])
 
+        if active_leds == 0:
+            print("No active LEDs to display", flush=True)
+            return
+
+        print(f"Sending {active_leds} active LEDs to device", flush=True)
+
         # ------------------------------------------------------------------
         # PACKET 0: Inicialização (Report ID 0 + 64 bytes)
         # ------------------------------------------------------------------
         p0_payload = [0xDA, 0xDB, 0xDC, 0xDD] + [0] * 8 + [0x01, 0, 0, 0]
         # Preenche com zeros até completar 64 bytes
         p0_payload += [0] * (64 - len(p0_payload))
-        self.dev.write(bytes([0] + p0_payload))
-        time.sleep(0.01)
+        try:
+            self.dev.write(bytes([0] + p0_payload))
+            time.sleep(0.01)
+        except Exception as e:
+            print(f"Error sending initialization packet: {e}", flush=True)
+            return
 
         # ------------------------------------------------------------------
         # PACKET 1: Header (20 bytes) + Dados
@@ -133,49 +145,33 @@ class Controller:
             0,
             0,  # Padding 8 bytes
             0x02,
-            0,
-            0,
-            0,  # Seq
             0x59,
-            0x01,
+            0x01,  # 345 bytes total (20 header + 325 data)
             0,
-            0,  # SIZE: 345 bytes (115 LEDs * 3)
+            0,
+            0,
+            0,  # Padding 4 bytes to reach 20 bytes
+            0,
         ]
 
-        # Constrói o fluxo contínuo de dados: Header + Todos os LEDs
-        full_stream = header + all_led_bytes
+        # 3. Montar pacote principal
+        main_payload = header + all_led_bytes
 
-        # Divide em pacotes de 64 bytes (Payload USB HID)
-        # O Packet 1 pega os primeiros 64 bytes desse fluxo (20 header + 44 dados)
-        # Os pacotes seguintes pegam o resto sequencialmente.
+        # 4. Dividir em chunks de 64 bytes
+        chunks = [main_payload[i : i + 64] for i in range(0, len(main_payload), 64)]
 
-        chunk_size = 64
-        for i in range(0, len(full_stream), chunk_size):
-            chunk = full_stream[i : i + chunk_size]
+        # 5. Enviar chunks (exceto o último que é de padding)
+        for i, chunk in enumerate(chunks):
+            # Adicionar Report ID no início de cada chunk
+            packet = bytes([i + 1] + chunk)  # Report IDs: 1, 2, 3, 4, 5, 6...
+            try:
+                self.dev.write(packet)
+                time.sleep(0.005)  # Pequeno atraso entre pacotes
+            except Exception as e:
+                print(f"Error sending packet {i}: {e}", flush=True)
+                return
 
-            # Se o último pedaço for menor que 64, preenche com zeros
-            if len(chunk) < 64:
-                chunk += [0] * (64 - len(chunk))
-
-            # Envia com o Report ID 0 na frente
-            self.dev.write(bytes([0] + chunk))
-
-    def draw_number(self, number, num_digits, digits_mapping):
-        """Draw a number using the digit mapping from layout.json"""
-        number_str = f"{number:0{num_digits}d}"
-        for i, digit_char in enumerate(number_str):
-            if i < len(digits_mapping):
-                digit = int(digit_char)
-                segments_to_light = digit_to_segments[digit]
-                digit_map = digits_mapping[i]["map"]
-                for segment_name in segments_to_light:
-                    segment_index = digit_map[segment_name]
-                    self.leds[segment_index] = 1
-
-    def draw_usage_phantom_spirit(self, usage):
-        """Draw usage % with special handling for 100s digit LED and leading zeros"""
-        if usage < 0 or usage > 199:
-            return
+        print(f"Successfully sent {len(chunks)} packets to device", flush=True)
 
         # Liga o símbolo de "%"
         self.leds[self.layout["usage_percent_led"]] = 1
@@ -523,14 +519,26 @@ class Controller:
         return updated
 
     def display(self):
+        print("Starting display loop", flush=True)
+        iteration = 0
         while True:
+            iteration += 1
             self.config = self.load_config()
             metrics_updated = self.update()
 
             if self.dev is None:
+                print("Device is None, trying to reopen", flush=True)
                 self.dev = self.get_device()
                 time.sleep(1)
                 continue
+
+            if (
+                iteration % 50 == 0
+            ):  # Log every 5 seconds (assuming 0.1s update_interval)
+                print(
+                    f"Display mode: {self.display_mode}, Color mode: {self.color_mode}",
+                    flush=True,
+                )
 
             if self.display_mode == "cpu_watts":
                 self.display_cpu_watts_mode()
@@ -539,10 +547,11 @@ class Controller:
             elif self.display_mode == "alternating_watts":
                 self.display_alternating_watts(metrics_updated)
             elif self.display_mode == "debug_ui":
+                print("Debug UI mode: setting all LEDs to green", flush=True)
                 self.colors = np.array(["00ff00"] * NUMBER_OF_LEDS)
                 self.leds[:] = 1
             else:
-                print(f"Unknown display mode: {self.display_mode}")
+                print(f"Unknown display mode: {self.display_mode}", flush=True)
 
             self.send_packets()
             time.sleep(self.update_interval)
