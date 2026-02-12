@@ -59,10 +59,22 @@ python3.pkgs.buildPythonPackage {
     "psutil"
   ];
 
-  # Simple postInstall - just copy config and use runCommand pattern
+  # Create wrapper script and copy config
   postInstall = ''
     mkdir -p $out/bin
     mkdir -p $out/share/hid-digital-lcd-controller
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
+    
+    # Create wrapper script
+    cat > $out/bin/hid-digital-lcd-controller << 'EOF'
+    #!${python3}/bin/python3
+    import sys
+    from digital_thermal_right_lcd.controller import main
+    if len(sys.argv) > 1:
+        sys.argv = ['hid-digital-lcd-controller', sys.argv[1]]
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else None))
+    EOF
+    
+    chmod +x $out/bin/hid-digital-lcd-controller
   '';
 }
