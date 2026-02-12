@@ -69,6 +69,8 @@ python3.pkgs.buildPythonPackage {
     cat > $out/bin/hid-digital-lcd-controller << 'EOF'
     #!${python3}/bin/python3
     import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
     from controller import main
     if len(sys.argv) > 1:
         sys.argv = ['hid-digital-lcd-controller', sys.argv[1]]
