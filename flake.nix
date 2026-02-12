@@ -1,5 +1,5 @@
 {
-  description = "FHS shell for uv + pyamdgpuinfo build";
+  description = "Digital LCD Controller for Thermalright CPU Coolers";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -7,7 +7,17 @@
     let
       system = "x86_64-linux";  # adjust if you're on a different arch
       pkgs = nixpkgs.legacyPackages.${system};
+      
+      # Package definition
+      hid-digital-lcd-controller = pkgs.callPackage ./package.nix {};
     in {
+      # Package for use in other Nix configurations
+      packages.${system}.default = hid-digital-lcd-controller;
+      
+      # NixOS module
+      nixosModules.default = import ./nixos-module.nix;
+
+      # Development shell (unchanged)
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           python313
@@ -41,6 +51,26 @@
           echo '    KERNEL=="hidraw*", ATTRS{idVendor}=="0416", ATTRS{idProduct}=="8001", MODE="0660", GROUP="wheel"'
           echo "'''"
         '';
+      };
+
+      # Example configuration for testing
+      nixosConfigurations.test-vm = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          self.nixosModules.default
+          ({ pkgs, ... }: {
+            services.hid-digital-lcd-controller.enable = true;
+            
+            # Use the config from this repo
+            services.hid-digital-lcd-controller.config = ./config.json;
+            
+            # Optional: run as a specific user
+            services.hid-digital-lcd-controller.user = "root";
+            services.hid-digital-lcd-controller.group = "root";
+            
+            system.stateVersion = "24.05";
+          })
+        ];
       };
     };
 }
