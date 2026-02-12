@@ -64,24 +64,5 @@ python3.pkgs.buildPythonPackage {
     mkdir -p $out/bin
     mkdir -p $out/share/hid-digital-lcd-controller
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
-    
-    # Create wrapper using runCommand to avoid quoting issues
-    writeShellScriptBin "hid-digital-lcd-controller" ''
-      #!${stdenv.shell}
-      exec ${python3}/bin/python3 -m digital_thermal_right_lcd.controller --config "$out/share/hid-digital-lcd-controller/config.json"
-    ''
-    in
-    writeShellScriptBin "hid-digital-lcd-controller" ''
-      #!${stdenv.shell}
-      exec ${python3}/bin/python3 -c "${pythonCode}"
-    ''
-    
-    chmod +x $out/bin/hid-digital-lcd-controller
   '';
-
-  meta = with lib; {
-    description = "Digital LCD controller for Thermalright CPU coolers";
-    license = licenses.mit;
-    platforms = platforms.linux;
-  };
 }
