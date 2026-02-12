@@ -1,7 +1,7 @@
 {
     "display_mode": "cpu_watts",
     "color_mode": "usage",
-    "gpu_vendor": "amd",
+    "gpu_vendor": "nvidia",
     "metrics": {
         "colors": [
             "0006d9-ff0608-cpu_temp",

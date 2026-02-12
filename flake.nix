@@ -9,7 +9,9 @@
       pkgs = nixpkgs.legacyPackages.${system};
       
       # Package definition
-      hid-digital-lcd-controller = pkgs.callPackage ./package.nix {};
+      hid-digital-lcd-controller = pkgs.callPackage ./package.nix {
+        uv = pkgs.uv;
+      };
     in {
       # Package for use in other Nix configurations
       packages.${system}.default = hid-digital-lcd-controller;

@@ -11,6 +11,7 @@
 , pkg-config
 , zlib
 , glibc
+, uv
 }:
 
 python3.pkgs.buildPythonPackage {
@@ -24,6 +25,7 @@ python3.pkgs.buildPythonPackage {
     pkg-config
     python3.pkgs.setuptools
     python3.pkgs.wheel
+    uv
   ];
 
   buildInputs = [
@@ -45,12 +47,23 @@ python3.pkgs.buildPythonPackage {
     pyamdgpuinfo
   ];
 
+  # Use uv to prepare dependencies before the standard build
   preBuild = ''
     export CPPFLAGS="-I${libdrm.dev}/include -I${linuxHeaders}/include/drm -I${libdrm.dev}/include/libdrm"
     export C_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:$C_INCLUDE_PATH"
     export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:$CPLUS_INCLUDE_PATH"
     export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
     export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:$LD_LIBRARY_PATH"
+    
+    # Use uv to sync dependencies to ensure they're available
+    export UV_CACHE_DIR=$TMPDIR/uv-cache
+    mkdir -p $UV_CACHE_DIR
+    
+    # Run uv sync to create virtual environment with dependencies
+    uv sync --no-dev --no-install-project
+    
+    # The virtual environment is now in .venv with all dependencies
+    export PYTHONPATH=$(pwd)/.venv/lib/python3.13/site-packages:$PYTHONPATH
   '';
 
   pythonImportsCheck = [
@@ -60,7 +73,7 @@ python3.pkgs.buildPythonPackage {
     "pyamdgpuinfo"
   ];
 
-  # Install wrapper script
+  # Install wrapper script that sets up proper environment
   postInstall = ''
     mkdir -p $out/bin
     mkdir -p $out/share/hid-digital-lcd-controller
@@ -68,21 +81,28 @@ python3.pkgs.buildPythonPackage {
     # Copy default config
     cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
     
-    # Create wrapper script
-    cat > $out/bin/hid-digital-lcd-controller << 'EOF'
-#!/usr/bin/env python3
+    # Create wrapper script that sets up environment
+    cat > $out/bin/hid-digital-lcd-controller << EOF
+#!/usr/bin/env bash
+set -e
+
+# Set environment variables for native libraries
+export CPPFLAGS="-I${libdrm.dev}/include -I${linuxHeaders}/include/drm -I${libdrm.dev}/include/libdrm"
+export C_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$C_INCLUDE_PATH"
+export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:\$CPLUS_INCLUDE_PATH"
+export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:\$PKG_CONFIG_PATH"
+export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:\$LD_LIBRARY_PATH"
+
+# Add the installed package to Python path
+export PYTHONPATH="$out/lib/python3.13/site-packages:\$PYTHONPATH"
+
+# Run the controller
+exec python3 -c "
 import sys
-import os
-
-# Add the package to Python path
-sys.path.insert(0, '${python3.sitePackages}')
-
-# Import and run the controller
+sys.path.insert(0, '$out/lib/python3.13/site-packages')
 from controller import main
-
-if __name__ == '__main__':
-    config_path = sys.argv[1] if len(sys.argv) > 1 else '$out/share/hid-digital-lcd-controller/config.json'
-    main(config_path)
+main('\${1:-$out/share/hid-digital-lcd-controller/config.json}')
+"
 EOF
     
     chmod +x $out/bin/hid-digital-lcd-controller
