@@ -17,9 +17,9 @@
       packages.${system}.default = hid-digital-lcd-controller;
       
       # NixOS module
-      nixosModules.default = import ./nixos-module.nix { 
-        inherit pkgs; 
-        package = hid-digital-lcd-controller; 
+      nixosModules.default = { ... }: {
+        imports = [ ./nixos-module.nix ];
+        _module.args.package = hid-digital-lcd-controller;
       };
 
       # Development shell (unchanged)
