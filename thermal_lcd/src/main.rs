@@ -179,6 +179,14 @@ impl Metrics {
         self.cpu_usage = get_cpu_usage(&mut self.cpu_prev_idle, &mut self.cpu_prev_total);
         self.cpu_speed = get_cpu_speed();
         self.cpu_watts = get_cpu_power(&mut self.rapl_last_energy, &mut self.rapl_last_time, self.cpu_usage);
+        
+        // Read GPU metrics
+        let (gpu_temp, gpu_usage, gpu_speed, gpu_watts) = get_gpu_metrics();
+        self.gpu_temp = gpu_temp;
+        self.gpu_usage = gpu_usage;
+        self.gpu_speed = gpu_speed;
+        self.gpu_watts = gpu_watts;
+        
         self.last_update = now;
     }
 }
@@ -257,6 +265,30 @@ fn get_cpu_speed() -> i32 {
         }
     }
     0
+}
+
+fn get_gpu_metrics() -> (i32, i32, i32, i32) {
+    // Returns (temp, usage, speed, watts) from nvidia-smi
+    let output = match std::process::Command::new("nvidia-smi")
+        .args(["--query-gpu=temperature.gpu,utilization.gpu,clocks.sm,power.draw", "--format=csv,noheader,nounits"])
+        .output()
+    {
+        Ok(o) => o,
+        Err(_) => return (0, 0, 0, 0),
+    };
+    
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    let parts: Vec<&str> = output_str.trim().split(',').map(|s| s.trim()).collect();
+    
+    if parts.len() >= 4 {
+        let temp = parts[0].parse::<i32>().unwrap_or(0);
+        let usage = parts[1].parse::<i32>().unwrap_or(0);
+        let speed = parts[2].parse::<i32>().unwrap_or(0);
+        // Remove " W" from power if present
+        let watts = parts[3].replace(" W", "").parse::<f32>().unwrap_or(0.0) as i32;
+        return (temp, usage, speed, watts);
+    }
+    (0, 0, 0, 0)
 }
 
 fn get_cpu_power(last_energy: &mut u64, last_time: &mut Instant, cpu_usage: i32) -> i32 {
@@ -620,6 +652,20 @@ impl Controller {
                     self.draw_speed(speed);
                     self.draw_watts(watts);
                     self.draw_temp(display_temp, is_cpu, &unit);
+                }
+                "gpu_watts" => {
+                    self.clear_leds();
+                    self.update_colors();
+                    let gpu_temp = if self.config.gpu_temperature_unit == "fahrenheit" {
+                        self.metrics.gpu_temp * 9 / 5 + 32
+                    } else {
+                        self.metrics.gpu_temp
+                    };
+                    self.draw_usage(self.metrics.gpu_usage);
+                    self.draw_speed(self.metrics.gpu_speed);
+                    self.draw_watts(self.metrics.gpu_watts);
+                    let unit = self.config.gpu_temperature_unit.clone();
+                    self.draw_temp(gpu_temp, false, &unit);
                 }
                 "debug_ui" => {
                     self.clear_leds();
