@@ -1,5 +1,5 @@
 {
-  "display_mode": "gpu_watts",
+  "display_mode": "alternating_watts",
   "color_mode": "usage",
   "gpu_vendor": "nvidia",
   "metrics": {
@@ -247,7 +247,7 @@
   },
   "update_interval": 0.1,
   "metrics_update_interval": 1.0,
-  "cycle_duration": 5.0,
+  "cycle_duration": 5,
   "gpu_min_temp": 30.0,
   "gpu_max_temp": 95.0,
   "cpu_min_temp": 30.0,
