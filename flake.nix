@@ -1,80 +1,71 @@
 {
-  description = "Digital LCD Controller for Thermalright CPU Coolers";
+  description = "Thermal LCD Controller for Phantom Spirit 120 EVO (Rust)";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
 
-  outputs = { self, nixpkgs }: 
+  outputs = { self, nixpkgs, rust-overlay, flake-utils }:
     let
-      system = "x86_64-linux";  # adjust if you're on a different arch
-      pkgs = nixpkgs.legacyPackages.${system};
-      
-      # Package definition
-      hid-digital-lcd-controller = pkgs.callPackage ./package.nix {};
-    in {
-      # Package for use in other Nix configurations
-      packages.${system}.default = hid-digital-lcd-controller;
-      
-      # NixOS module
-      nixosModules.default = { ... }: {
-        imports = [ ./nixos-module.nix ];
-        _module.args.package = hid-digital-lcd-controller;
+      systems = [ "x86_64-linux" "aarch64-linux" ];
+      overlay = final: prev: {
+        thermal-lcd = prev.rustPlatform.buildRustPackage {
+          pname = "thermal-lcd";
+          version = "0.1.0";
+          src = ./thermal_lcd;
+          cargoLock = {
+            lockFile = ./thermal_lcd/Cargo.lock;
+          };
+          buildInputs = [ prev.systemd.dev prev.udev ];
+          nativeBuildInputs = [ prev.pkg-config ];
+          postInstall = ''
+            mkdir -p $out/share/thermal-lcd
+            cp ${./config.json} $out/share/thermal-lcd/config.json
+          '';
+          meta = with prev.lib; {
+            description = "Thermal LCD Controller for Phantom Spirit 120 EVO";
+            platforms = platforms.linux;
+          };
+        };
+      };
+    in
+    {
+      overlays.default = overlay;
+
+      lib = (flake-utils.lib.eachSystem systems (system:
+        let pkgs = import nixpkgs { inherit system; overlays = [ rust-overlay.overlays.default overlay ]; };
+        in {
+          thermal-lcd-src = pkgs.thermal-lcd.src;
+        }
+      )) // {
+        x86_64-linux = (flake-utils.lib.eachSystem systems (system:
+          let pkgs = import nixpkgs { inherit system; overlays = [ rust-overlay.overlays.default overlay ]; };
+          in { thermal-lcd-src = pkgs.thermal-lcd.src; }
+        )).x86_64-linux;
       };
 
-      # Development shell (unchanged)
-      devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [
-          python313
-          python3Packages.tkinter
-          libdrm.dev
-          libpciaccess
-          linuxHeaders
-          mesa
-          libGL
-          gcc
-          pkg-config
-          zlib
-          python3Packages.cython
-          uv
-          stdenv.cc.cc.lib
-          glibc
-          hidapi
-        ];
-        
-        shellHook = ''
-          export CPPFLAGS="-I${pkgs.linuxHeaders}/include/drm -I${pkgs.libdrm.dev}/include -I${pkgs.libdrm.dev}/include/libdrm"
-          export C_INCLUDE_PATH="${pkgs.libdrm.dev}/include:${pkgs.linuxHeaders}/include:$C_INCLUDE_PATH"
-          export CPLUS_INCLUDE_PATH="${pkgs.libdrm.dev}/include:${pkgs.linuxHeaders}/include:$CPLUS_INCLUDE_PATH"
-          export PKG_CONFIG_PATH="${pkgs.libdrm.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
-          export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.glibc}/lib:${pkgs.zlib}/lib:${pkgs.hidapi}/lib:$LD_LIBRARY_PATH"
-          echo "Development environment ready with DRM headers"
-          echo "Try: uv sync"
-          echo "For device access, use: sudo -E uv run src/controller.py config.json"
-          echo "Or update your NixOS udev rule:"
-          echo 'services.udev.extraRules = '''
-          echo '    KERNEL=="hidraw*", ATTRS{idVendor}=="0416", ATTRS{idProduct}=="8001", MODE="0660", GROUP="wheel"'
-          echo "'''"
-        '';
-      };
+      nixosModules.default = import ./nixos-module.nix;
+    } // flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          overlays = [ rust-overlay.overlays.default overlay ];
+          inherit system;
+        };
+      in
+      {
+        packages.thermal-lcd = pkgs.thermal-lcd;
+        packages.default = pkgs.thermal-lcd;
 
-      # Example configuration for testing
-      nixosConfigurations.test-vm = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          self.nixosModules.default
-          ({ pkgs, ... }: {
-            services.hid-digital-lcd-controller.enable = true;
-            
-            # Use the config from this repo
-            services.hid-digital-lcd-controller.config = ./config.json;
-            
-            # Optional: run as a specific user
-            services.hid-digital-lcd-controller.user = "root";
-            services.hid-digital-lcd-controller.group = "root";
-            
-            system.stateVersion = "24.05";
-          })
-        ];
-      };
-    };
+        devShells.${system} = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            rustup
+            cargo
+            pkg-config
+            systemd.dev
+          ];
+        };
+      }
+    );
 }
-

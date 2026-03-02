@@ -3,14 +3,15 @@
 with lib;
 
 let
-  cfg = config.services.hid-digital-lcd-controller;
+  cfg = config.services.thermal-lcd;
+  thermal-lcd-pkg = pkgs.callPackage ./package.nix {};
 in {
-  options.services.hid-digital-lcd-controller = {
-    enable = mkEnableOption "Digital LCD Controller for Thermalright CPU Cooler";
+  options.services.thermal-lcd = {
+    enable = mkEnableOption "Thermal LCD Controller for Phantom Spirit 120 EVO";
 
     config = mkOption {
       type = types.path;
-      default = "${config._module.args.package}/share/hid-digital-lcd-controller/config.json";
+      default = "${thermal-lcd-pkg}/share/thermal-lcd/config.json";
       description = "Path to the configuration file";
     };
 
@@ -28,10 +29,10 @@ in {
   };
 
   config = mkIf cfg.enable {
-    systemd.packages = [ config._module.args.package ];
+    systemd.packages = [ thermal-lcd-pkg ];
 
-    systemd.services.hid-digital-lcd-controller = {
-      description = "Digital LCD Controller for Thermalright CPU Cooler";
+    systemd.services.thermal-lcd = {
+      description = "Thermal LCD Controller for Phantom Spirit 120 EVO";
       after = [ "network.target" ];
       wants = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
@@ -40,7 +41,7 @@ in {
         Type = "simple";
         User = cfg.user;
         Group = cfg.group;
-        ExecStart = "${config._module.args.package}/bin/hid-digital-lcd-controller ${cfg.config}";
+        ExecStart = "${thermal-lcd-pkg}/bin/thermal-lcd";
         Restart = "always";
         RestartSec = 5;
         StandardOutput = "journal";
@@ -48,17 +49,13 @@ in {
       };
 
       environment = {
-        CPPFLAGS = "-I${pkgs.libdrm.dev}/include -I${pkgs.linuxHeaders}/include/drm -I${pkgs.libdrm.dev}/include/libdrm";
-        C_INCLUDE_PATH = "${pkgs.libdrm.dev}/include:${pkgs.linuxHeaders}/include:$C_INCLUDE_PATH";
-        CPLUS_INCLUDE_PATH = "${pkgs.libdrm.dev}/include:${pkgs.linuxHeaders}/include:$CPLUS_INCLUDE_PATH";
-        PKG_CONFIG_PATH = "${pkgs.libdrm.dev}/lib/pkgconfig:$PKG_CONFIG_PATH";
-        LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.glibc}/lib:${pkgs.zlib}/lib:${pkgs.hidapi}/lib:$LD_LIBRARY_PATH";
+        DIGITAL_LCD_CONFIG = cfg.config;
       };
     };
 
-    # Add udev rule for device access
     services.udev.extraRules = ''
       KERNEL=="hidraw*", ATTRS{idVendor}=="0416", ATTRS{idProduct}=="8001", MODE="0660", GROUP="${cfg.group}"
+      SUBSYSTEM=="powercap", MODE="0666"
     '';
   };
 }

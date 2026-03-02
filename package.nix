@@ -1,90 +1,30 @@
 { lib
-, python3
-, stdenv
-, hidapi
-, libdrm
-, libpciaccess
-, linuxHeaders
-, mesa
-, libGL
-, gcc
+, rustPlatform
 , pkg-config
-, zlib
-, glibc
+, systemd
+, udev
 }:
 
-python3.pkgs.buildPythonPackage {
-  pname = "hid-digital-lcd-controller";
-  version = "1.0";
-  format = "pyproject";
+rustPlatform.buildRustPackage {
+  pname = "thermal-lcd";
+  version = "0.1.0";
 
-  src = ./.;
+  src = ./thermal_lcd;
+  cargoLock = {
+    lockFile = ./thermal_lcd/Cargo.lock;
+  };
 
-  nativeBuildInputs = [
-    pkg-config
-    python3.pkgs.setuptools
-    python3.pkgs.wheel
-    python3.pkgs.hatchling
-  ];
+  buildInputs = [ systemd.dev udev ];
+  nativeBuildInputs = [ pkg-config ];
 
-  buildInputs = [
-    hidapi
-    libdrm
-    libpciaccess
-    linuxHeaders
-    mesa
-    libGL
-    gcc
-    zlib
-    glibc
-  ];
-
-  propagatedBuildInputs = with python3.pkgs; [
-    numpy
-    hid
-    psutil
-  ];
-
-  preBuild = ''
-    export CPPFLAGS="-I${libdrm.dev}/include -I${linuxHeaders}/include/drm -I${libdrm.dev}/include/libdrm"
-    export C_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:$C_INCLUDE_PATH"
-    export CPLUS_INCLUDE_PATH="${libdrm.dev}/include:${linuxHeaders}/include:$CPLUS_INCLUDE_PATH"
-    export PKG_CONFIG_PATH="${libdrm.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
-    export LD_LIBRARY_PATH="${stdenv.cc.cc.lib}/lib:${glibc}/lib:${zlib}/lib:${hidapi}/lib:$LD_LIBRARY_PATH"
-  '';
-
-  pythonImportsCheck = [
-    "numpy"
-    "hid"
-    "psutil"
-  ];
-
-  # Create wrapper script and copy config
   postInstall = ''
-    mkdir -p $out/bin
-    mkdir -p $out/share/hid-digital-lcd-controller
-    mkdir -p $out/src
-    
-    # Copy source files and layout
-    cp -r src/* $out/src/
-    cp ${./config.json} $out/share/hid-digital-lcd-controller/config.json
-    cp ${./layout.json} $out/layout.json  # Copy to root as expected by code
-    
-    # Create wrapper script
-    cat > $out/bin/hid-digital-lcd-controller << 'EOF'
-    #!${python3}/bin/python3
-    import sys
-    import os
-    # Add the source directory to Python path
-    bin_dir = os.path.dirname(os.path.abspath(__file__))
-    src_dir = os.path.join(bin_dir, '..', 'src')
-    sys.path.insert(0, src_dir)
-    from controller import main
-    if len(sys.argv) > 1:
-        sys.argv = ['hid-digital-lcd-controller', sys.argv[1]]
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else None))
-    EOF
-    
-    chmod +x $out/bin/hid-digital-lcd-controller
+    mkdir -p $out/share/thermal-lcd
+    cp ${./config.json} $out/share/thermal-lcd/config.json
+    mv $out/bin/thermal_lcd $out/bin/thermal-lcd || true
   '';
+
+  meta = with lib; {
+    description = "Thermal LCD Controller for Phantom Spirit 120 EVO";
+    platforms = platforms.linux;
+  };
 }
