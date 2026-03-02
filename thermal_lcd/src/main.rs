@@ -605,13 +605,13 @@ impl Controller {
     }
 
     fn display_loop(&mut self) {
-        let update_interval = Duration::from_secs_f64(self.config.update_interval);
-        let cycle_duration = (self.config.cycle_duration / self.config.update_interval) as usize;
         loop {
             self.metrics.update();
             self.config = load_config(
                 &std::env::var("DIGITAL_LCD_CONFIG").unwrap_or_else(|_| "../config.json".to_string())
             );
+            let update_interval = Duration::from_secs_f64(self.config.update_interval);
+            let cycle_duration = (self.config.cycle_duration / self.config.update_interval) as usize;
             if self.dev.is_none() {
                 self.connect();
                 if self.dev.is_none() {
@@ -632,10 +632,11 @@ impl Controller {
                     }
                     self.clear_leds();
                     self.update_colors();
-                    let (usage, speed, watts, temp, is_cpu) = if self.showing_cpu.load(Ordering::SeqCst) {
-                        (self.metrics.cpu_usage, self.metrics.cpu_speed, self.metrics.cpu_watts, self.metrics.cpu_temp, true)
+                    let is_cpu = self.showing_cpu.load(Ordering::SeqCst);
+                    let (usage, speed, watts, temp) = if is_cpu {
+                        (self.metrics.cpu_usage, self.metrics.cpu_speed, self.metrics.cpu_watts, self.metrics.cpu_temp)
                     } else {
-                        (self.metrics.gpu_usage, self.metrics.gpu_speed, self.metrics.gpu_watts, self.metrics.gpu_temp, false)
+                        (self.metrics.gpu_usage, self.metrics.gpu_speed, self.metrics.gpu_watts, self.metrics.gpu_temp)
                     };
                     let display_temp = if (is_cpu && self.config.cpu_temperature_unit == "fahrenheit") ||
                         (!is_cpu && self.config.gpu_temperature_unit == "fahrenheit") {
