@@ -50,6 +50,7 @@ in {
 
       environment = {
         DIGITAL_LCD_CONFIG = cfg.config;
+        PATH = lib.mkForce "/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin";
       };
     };
 
