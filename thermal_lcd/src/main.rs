@@ -248,23 +248,22 @@ fn get_cpu_usage(prev_idle: &mut u64, prev_total: &mut u64) -> i32 {
 }
 
 fn get_cpu_speed() -> i32 {
-    if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
-        for line in contents.lines() {
-            if line.starts_with("cpu MHz") {
-                if let Some(mhz) = line.split(':').nth(1) {
-                    if let Ok(speed) = mhz.trim().parse::<f64>() {
-                        return speed as i32;
-                    }
-                }
-            }
-        }
-    }
-    if let Some(scaling) = read_file("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq") {
-        if let Ok(freq) = scaling.trim().parse::<i64>() {
-            return (freq / 1000) as i32;
-        }
-    }
-    0
+    fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|c| {
+            let speeds = c.lines()
+                .filter(|l| l.starts_with("cpu MHz"))
+                .filter_map(|l| l.split(':').nth(1)?.trim().parse::<f64>().ok())
+                .collect::<Vec<_>>();
+            if speeds.is_empty() { None }
+            else { Some((speeds.iter().sum::<f64>() / speeds.len() as f64) as i32) }
+        })
+        .or_else(|| {
+            read_file("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+                .and_then(|f| f.trim().parse::<i64>().ok())
+                .map(|f| (f / 1000) as i32)
+        })
+        .unwrap_or(0)
 }
 
 fn get_gpu_metrics() -> (i32, i32, i32, i32) {
