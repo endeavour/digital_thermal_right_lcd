@@ -119,6 +119,16 @@ impl Default for Layout {
     }
 }
 
+// 7 Segment Display, and which segments should be illuminated for each digit from 0-9.
+// The segments are numbered as follows:
+//     0
+//   +---+
+// 5 |   | 1
+//   +-6-+
+// 4 |   | 2
+//   +---+
+//     3
+
 const DIGIT_SEGMENTS: [&[usize]; 10] = [
     &[0, 1, 2, 3, 4, 5],
     &[1, 2],
